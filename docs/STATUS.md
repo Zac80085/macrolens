@@ -4,7 +4,17 @@ Read this first after any context reset. Phases and exit criteria: `docs/PLAN.md
 
 ## Next step
 
-Start P2: write `docs/design.md` (playbook 2.2 HLD + LLD, design-level traceability matrix, diagrams with version and date, photo sequence with one alt branch per FM-001 to FM-005 and FM-011) and ADR-0001 to ADR-0009; retest `gemini-3.6-flash` before ADR-0007 locks; run the independent reviewer subagent; run the 3 gates; lock; commit.
+P2 is done. Waiting for Zac's confirmation before starting P3. Zac asked on 2026-11-17 to finish Phase 2 and wait.
+
+When confirmed, P3 Scaffold covers:
+- Vite + React + TypeScript strict, Tailwind, ESLint, Prettier.
+- Vitest, Testing Library, MSW, fake-indexeddb, Playwright with `@axe-core/playwright`.
+- `vite-plugin-pwa` with the `cspMeta()` and `zxingWasm()` plugins (`docs/design.md` LLD-09.1).
+- Dexie, `zod/mini`, `@google/genai`, `barcode-detector`.
+- SheetJS from the versioned CDN tarball; check its SHA-256 (ADR-0011).
+- `src/config.ts` with the constants of design Section 6.3.
+- GitHub Actions CI as design Section 6.4, including `npm audit` and `gitleaks`, plus the Pages deploy job.
+- Check that every `CLAUDE.md` command exits 0 from a clean clone (AC-D1).
 
 ## Phase checklist
 
@@ -12,7 +22,7 @@ Start P2: write `docs/design.md` (playbook 2.2 HLD + LLD, design-level traceabil
 |---|---|
 | P0 Setup and spikes | Done 2026-11-17 |
 | P1 Requirements analysis | Done 2026-11-17 (`docs/requirements.md` v1.0.0 locked) |
-| P2 Design lock | In progress |
+| P2 Design lock | Done 2026-11-17 (`docs/design.md` v1.0.0 locked, ADR-0001 to ADR-0009, ADR-0011 to ADR-0015) |
 | P3 Scaffold | Not started |
 | P4 Domain and data | Not started |
 | P5 Services | Not started |
@@ -36,11 +46,16 @@ Start P2: write `docs/design.md` (playbook 2.2 HLD + LLD, design-level traceabil
 | 2026-11-17 | P1 | Zac's gap 3: objectives with metric/baseline/target (Section 2), actors and permissions (4), retention and classification (7.1), release criteria (11) added |
 | 2026-11-17 | P1 | Zac's gap 4 (R-5): no section marked BLOCKED, because OQ-001 was Resolved in P0 before any design section was drafted |
 | 2026-11-17 | P1 | Zac's gap 6: every NFR has a load condition column (Section 6) |
-| 2026-11-17 | P2 (pending) | Zac's gap 5 (OD-D1): photo sequence diagram in `docs/design.md` gets one alt branch per FM-001 to FM-005 and FM-011 |
-| 2026-11-17 | P2 (pending) | Zac's gap 7: every diagram in `docs/design.md` carries version and date |
+| 2026-11-17 | P2 | Zac's gap 5 (OD-D1) done: `docs/design.md` Section 10.1 has a branch for each of FM-001 to FM-005, FM-011, FM-015, FM-018 and FM-024, plus `NETWORK_OFFLINE` |
+| 2026-11-17 | P2 | Zac's gap 7 done: all 7 diagrams in `docs/design.md` carry "Diagram version 1.0.0, 2026-11-17" |
 | 2026-11-17 | P1 | Full REQ→HLD→LLD→test matrix moves to `docs/design.md` (playbook D-1); `docs/requirements.md` keeps objective→REQ→TC |
 | 2026-11-17 | P1 | CoFID carbs stored unchanged (monosaccharide equivalents) for source fidelity; disclosed on About (REQ-061). Conversion by ÷1.05/÷1.10 rejected: it turns measured values into estimates. ADR-0004 records it |
-| 2026-11-17 | P2 (pending) | ZXing WASM for `barcode-detector` must be self-hosted (offline, CSP `script-src 'wasm-unsafe-eval'`); design in ADR-0006 |
+| 2026-11-17 | P2 | ZXing WASM is self-hosted and hash-checked at build (`ZXING_WASM_SHA256`, ADR-0006, LLD-09.1) |
+| 2026-11-17 | P2 | Gemini default stays `gemini-3.6-flash` with `gemini-3.5-flash-lite` on attempt 2 (ADR-0007). Flash answered 0 of 11 probes; the cost is bounded by NFR-012 and NFR-013; reviewed in UAT |
+| 2026-11-17 | P2 | Nutrient sums use exact integer micro-units; stored per-100 values have at most 3 decimals (ADR-0015) |
+| 2026-11-17 | P2 | Design narrows `NETWORK_OFFLINE` to `navigator.onLine === false`; a `TypeError` while online is retried as the service's `*_UNAVAILABLE` (`docs/design.md` Section 4.2 delta) |
+| 2026-11-17 | P2 | The usage fixes Zac approved: CLAUDE.md never-read-PLAN-whole rule; 41 unused skills off in `~/.claude/settings.json`; search, exploration and web-fetch subagents on sonnet; `.claude/agents/phase-reviewer.md` (`model: opus`) for the P1, P2 and P8 reviews |
+| 2026-11-17 | P2 | The `phase-reviewer` agent type loads at session start, so this session ran both P2 reviews as general-purpose agents on Opus with the same rules in the prompt. The next session should check that `phase-reviewer` is listed |
 | 2026-11-17 | P0 | Accuracy findings P0-F1 to P0-F13 in `docs/spikes.md` go into `docs/requirements.md` (P1) and ADRs (P2) |
 
 ## P1 independent review: defect dispositions
@@ -75,6 +90,55 @@ Reviewer subagent (did not write the artifact) reported 19 defects and 4 advisor
 | A3 | Advisory | Kept: NFR-006 and NFR-011 are measured by CI checks, stated in Section 12 |
 | A4 | Advisory | Kept: REQ-029 gestures are one trigger for one outcome; REQ-062 redaction is a constraint on the same list |
 
+## P2 independent review: defect dispositions
+
+Two reviews ran on Opus with the `phase-reviewer` rules; neither reviewer wrote the design.
+- **Review 1:** 24 defects and 2 advisories on design 1.0.0-draft.
+- **Review 2 (confirmation):** all 26 items CLOSED; 8 new defects (N1 to N8) and 5 advisories.
+- **Fixes:** every item below is fixed. No third review ran; Claude Code checked the N fixes by script (gate line below).
+
+| # | Catalogue ID | Disposition |
+|---|---|---|
+| 1 | TD-D3 | Fixed: `deadlineAt` starts at `input_submitted` (61,500 ms, plus a 500 ms reserve) and bounds preprocessing, chunk import, Gemini, CoFID wait and matching (Section 7 NFR-012) |
+| 2 | TD-D2 | Fixed: `searchUsda` takes `opts.attempts` and `opts.timeoutMs` |
+| 3 | TD-D2/D4 | Fixed: `ScoredFood` defined; `searchCofidScored`; score clamped to [0, 1] |
+| 4 | TD-D2 | Fixed: `Aborted` and `Cancellable<T>` defined (Section 4.2) |
+| 5 | TD-D2 | Fixed: full error lists; a default status mapping in LLD-11.1 and `mapGeminiError` |
+| 6 | Consistency | Fixed: one network rule (Section 9 and LLD-11.1) |
+| 7 | TD-D3/OD-D1 | Fixed: step order; validation inside the loop; repair outcomes; request count ≤ 3 |
+| 8 | TD-D3 | Fixed: FM-024 for lazy chunk import |
+| 9 | OD-D1/D2 | Fixed: diagrams nest later steps inside success branches; `validateGtin` goes to Nutrition Domain; `analyseText` shown; Section 10.4 has pre- and postconditions |
+| 10 | SD-D3/D4/D5 | Fixed: boundary, one arrow meaning, HLD-10 and GOV.UK added, element tables, WASM typed as a static asset |
+| 11 | TD-D1 | Fixed: Serves column derived from Section 12 by script; matrix rows added for REQ-004, 045, 049, 054 to 056, 076, 080 |
+| 12 | TD-D5 | Fixed: 1 KB = 1,024 bytes; 32.3% and 89.1% headroom in Section 7, ADR-0003 and ADR-0013 |
+| 13 | Correctness | Superseded by N1 (ADR-0015) |
+| 14 | Correctness | Fixed: EAN-8 first, UPC-E through its expansion, `format` hint; 12-digit value returned |
+| 15 | Correctness | Fixed: `detectBasis` regex covers "6x330ml", dl, litres |
+| 16 | Correctness | Fixed: `fold` splits hyphens and slashes, drops apostrophes, maps œ æ ß ø ł |
+| 17 | Correctness | Fixed: CSP injected only at build by `cspMeta()` |
+| 18 | Depth | Fixed: `logFavourite`, `saveProfileAndTargets`, `readAll`, `applyImport` |
+| 19 | Depth | Fixed: a per-100 edit sets `source = 'manual'`, `sourceId = null`, `flags = []` |
+| 20 | Depth | Fixed: types table (Section 4.2), routes and Add→Review hand-off (Section 5.3), WASM copy by `zxingWasm()` |
+| 21 | Consistency | Fixed, then extended by N4 |
+| 22 | TD-D4 | Fixed: `ai.test.*` and `usda.test.*` events; `ZXING_WASM_SHA256` value; `<APP_VERSION>`; `WASM_PREPARE_TIMEOUT_MS`; watchdog on open and read; event-name pattern; ADR-0014 run time; fallback only after 503, 504 or timeout |
+| 23 | Test strategy | Fixed: Section 11.22 maps every public function to a TC; amendments for FM-019, FM-022, FM-023, FM-024 |
+| 24 | REC-D4 | Fixed: owners on follow-ups; 0 of 11 Flash calls (`docs/spikes.md` corrected from "0 of 7"); versioned SheetJS tarball hashed (same SHA-256); `npm audit` in CI |
+| A25 | Advisory | Fixed: `addSecret` before key tests; no URL in events |
+| A26 | Advisory | Fixed: qualifiers in ADR-0004, 0005, 0007 and 0012 replaced |
+| N1 | TD-D5 | Fixed: exact integer micro-unit arithmetic; `StoredPer100` to 3 decimals; ADR-0015 (CoFID measured: 4 binary-artefact cells, all other values ≤ 3 decimals) |
+| N2 | TD-D4 | Fixed: a repair that times out, fails with 5xx or reaches the deadline ends `GEMINI_BAD_RESPONSE` (FM-003, Section 10.1, LLD-06.2, TC-031) |
+| N3 | TD-D4 | Fixed: `NETWORK_OFFLINE` delta to REQS 9.1 recorded with its reason (Section 4.2) |
+| N4 | TD-D2 | Fixed: DR-08 rename applies to every file favourite kept by the merge (LLD-08.1, TC-062) |
+| N5 | OD-D1/D2 | Fixed: Section 10.4 shows the `readAll` response and the `STORAGE_UNAVAILABLE` branch |
+| N6 | OD-D1 | Fixed: Section 10.1 has a `NETWORK_OFFLINE` branch |
+| N7 | TD-D4 | Fixed: FM-024 shows "Reload app" (not retryable; the photo is lost) in FM-024, Section 10.5 and LLD-01.2 |
+| N8 | TD-D4 | Fixed: the `Cancellable` rule names the `matchItems` exception |
+| RA1 | Advisory | Fixed: this section and the P2 phase-log line |
+| RA2 | Advisory | Fixed: CoFID edge reads "at analysis start or first search" |
+| RA3 | Advisory | Fixed: container renamed "PWA Layer" |
+| RA4 | Advisory | Fixed: `zxingWasm()` hash failure added to TC-089 |
+| RA5 | Advisory | Fixed: REQ-041 row includes LLD-01.3 |
+
 ## Phase log
 
 | Phase | Date | Gates | Result | Next step |
@@ -82,3 +146,4 @@ Reviewer subagent (did not write the artifact) reported 19 defects and 4 advisor
 | P0 | 2026-11-17 | Traceability: n/a for spike notes. Syntax & Command: CORS spike run in 2 browsers, 3 of 3 APIs PASS; T0.3 live call not run (FAIL: no key, B-03). Precision: vague-term scan 1 match, inside a quotation from the CoFID user guide | Exit criteria met; T0.3 live call open | B-03, then T0.3, then P1 |
 | P0 (T0.3) | 2026-11-17 | Syntax & Command: models list 200; image call valid on `gemini-3.5-flash-lite`; `gemini-3.6-flash` 503 (service-side, recorded as P0-F12); USDA key 200. Precision: scan re-run on `docs/spikes.md` | P0 done | P1 |
 | P1 | 2026-11-17 | Traceability PASS: 65 REQ + 13 NFR rows in `docs/requirements.md` Section 12, 0 empty cells, 0 orphans, 18 retired IDs not reused. Syntax & Command PASS: 0 commands, 0 diagrams in the file; 6 placeholders declared; 5 referenced paths exist. Precision PASS: vague-term scan 0 matches (exit 1); every NFR has number, unit, window, load condition; every failure names a catalogue code | Locked v1.0.0; reviewer defects 19 of 19 fixed | P2 |
+| P2 | 2026-11-17 | Traceability PASS (scripted): 78 of 78 active IDs in design Section 12; 0 empty cells; 21 LLDs, each with 1 HLD parent; 0 Serves-vs-matrix differences across 12 HLDs; 24 FM rows, 0 undefined FM refs; every error code in REQS 9.1 (27); every TC ID exists. Syntax & Command PASS: 7 of 7 Mermaid diagrams render with `mmdc` 12.2.0 (exit 0, no syntax error, empty stderr); every event name matches the Section 4.2 pattern. Precision PASS: vague-term scan on `docs/design.md` and 14 ADRs matches only "many" inside the quoted Gemini error in ADR-0014 | Locked v1.0.0; review 1: 24 of 24 defects and 2 of 2 advisories fixed; review 2: 8 of 8 new defects and 5 of 5 advisories fixed | Wait for Zac's confirmation, then P3 |

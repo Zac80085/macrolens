@@ -7,7 +7,7 @@ Macrolens is Zac's personal calorie and macro tracker: a PWA for his iPhone, hos
 ## Read first
 
 1. `docs/STATUS.md`: current phase and next step. Read it at the start of every session and after any context reset.
-2. `docs/PLAN.md`: the plan. Requirement, component, error and test IDs come from here.
+2. `docs/PLAN.md`: the plan. Requirement, component, error and test IDs come from here. Search it; never read it whole (see Workflow rules).
 3. `docs/ENGINEERING_QA_PLAYBOOK.md`: the quality rules every artifact follows.
 4. `docs/requirements.md` and `docs/design.md` once they exist (Phase 1 and 2). When they differ from `PLAN.md`, the newer locked document wins.
 
@@ -68,6 +68,9 @@ npm run gates                   # lint, typecheck, coverage, e2e, size, trace, v
 - A change is complete only when `npm run lint`, `npm run typecheck` and `npm test` exit 0.
 - A phase is complete only when its exit criteria in `docs/PLAN.md` Section 13 pass and `docs/STATUS.md` has a new line.
 - Record each decision with 2 or more options as an ADR in `docs/adr/ADR-nnnn-<slug>.md`.
+- Reviewer subagents in Phases 1, 2 and 8 run on Opus 5.5, never Haiku: use the `phase-reviewer` agent (`.claude/agents/phase-reviewer.md`, `model: opus`).
+- Search, exploration and web-fetch subagents run with `model: "sonnet"`.
+- Never read `docs/PLAN.md` whole. Search it with `grep -n`, or read only the lines you need (Read with `offset` and `limit`).
 - Ask Zac only for the blockers B-01 to B-07 in `docs/PLAN.md` Section 13. For anything else, choose, record the choice in `docs/STATUS.md`, and continue.
 
 ## Prohibitions

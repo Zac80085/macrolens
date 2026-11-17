@@ -166,6 +166,7 @@ ASM-009 check: the user guide confirms `Tr` = trace and `N` = "present in signif
 | `playwright` | 1.65.1 |
 | `xlsx` (npm registry) | 0.18.5, reported by `npm audit` as 1 high-severity vulnerability |
 | `xlsx` (SheetJS CDN, `https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz`) | 0.20.3, tarball SHA-256 `8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8` |
+| `xlsx` (SheetJS CDN, versioned `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`) | Same SHA-256 `8dc73fc3…99fe8`, 2,409,319 bytes (hashed 2026-11-17 during the Phase 2 review) |
 
 Decision for Phase 3: install SheetJS 0.20.3 from the versioned CDN tarball, not the npm registry, because the registry release has a known high-severity advisory and is used to parse an external file.
 
@@ -177,4 +178,33 @@ Decision for Phase 3: install SheetJS 0.20.3 from the versioned CDN tarball, not
 | Default WASM location | `https://fastly.jsdelivr.net/npm/zxing-wasm@3.1.7/dist/reader/zxing_reader.wasm`, fetched at run time | `zxing-wasm` 3.1.7 `dist/es` |
 | Override | `prepareZXingModule({ overrides: { locateFile: (path, prefix) => ... } })` and `ZXING_WASM_VERSION` are re-exported by `barcode-detector/ponyfill` | `barcode-detector` README lines 189 to 212 |
 | WASM size | `zxing_reader.wasm` 946,598 bytes; 410,992 bytes gzip | `stat -f %z`, `gzip -c ... \| wc -c` |
+| WASM SHA-256 | `33c8c50be17d0bb05454b4fd3ffb5b5ab9a8e8d1c0ebeb21a1adf4a89c1a8b59` (`zxing-wasm` 3.1.7, measured 2026-11-17 during the Phase 2 review) | `shasum -a 256` |
 | Consequence | The default CDN URL is outside the NFR-009 `connect-src` list and is unavailable offline. The app MUST serve `zxing_reader.wasm` from its own origin, load it only when the Scan tab opens (outside the NFR-006 initial JavaScript budget), and precache it in the service worker. CSP `script-src` needs `'wasm-unsafe-eval'` | Derived |
+
+## Addendum (Phase 2): Gemini availability retest (ASM-002, ASM-015, ADR-0007 input)
+
+| Time (2026-11-17, GMT) | Request | Result |
+|---|---|---|
+| 15:06 | Image call (reduced schema) to `gemini-3.6-flash`, twice | 503 `UNAVAILABLE` "high demand", both |
+| 15:06 | Image call to `gemini-3.8-flash` | 504 `DEADLINE_EXCEEDED` |
+| 15:08 | Text "Reply with the single word: ok" to `gemini-3.6-flash` | 503 after 11,012 ms |
+| 15:08 | Same text to `gemini-3.5-flash` | 503 after 12,869 ms |
+| 15:08 | Same text to `gemini-flash-latest` and `gemini-flash-lite-latest` | 404 "not found for API version v1": the aliases in the models list are not callable through `generateContent` |
+| 15:08 | Same text to `gemini-3.5-flash-lite` | 200 in 1,579 ms, `modelVersion = gemini-3.5-flash-lite` |
+
+Result: across about 55 minutes (Phase 0 and this retest), 0 of 11 Flash calls succeeded (7 to `gemini-3.6-flash`, 2 to `gemini-3.8-flash`, 1 to `gemini-3.7-flash`, 1 to `gemini-3.5-flash`) and 3 of 3 Flash-Lite calls succeeded with this free-tier key. ASM-015 holds; ASM-002's default model is unavailable for this key at the times tested.
+
+## Addendum (Phase 2): size measurements (NFR-006 input)
+
+Method: `esbuild` bundle, `--minify --format=esm --platform=browser`, production `NODE_ENV`, then `gzip -9 | wc -c`. Versions as installed on 2026-11-17.
+
+| Bundle | Entry used | Gzip bytes |
+|---|---|---|
+| CoFID data file built per `docs/requirements.md` CR-01 to CR-07 (2,853 foods, 31 `ml`) | Spike conversion script, `JSON.stringify` | 66,687 (442,061 raw) |
+| `react` 19.3.1 + `react-dom/client` + `react-router` 8.5.1 (`createHashRouter`) | Minimal app root | 101,853 |
+| `dexie` 4.4.7 | `import Dexie from 'dexie'` | 32,762 |
+| `zod` 4.6.7 classic API | 2 object schemas, `safeParse`, `z.toJSONSchema` | 92,626 |
+| `zod/mini` 4.6.7 | Same 2 schemas with the mini API | 13,297 |
+| `@google/genai` 3.4.0 | `import { GoogleGenAI }` | 78,510 |
+| `barcode-detector/ponyfill` 3.2.4 (JavaScript only; WASM separate) | `import { BarcodeDetector }` | 14,770 |
+| `zxing_reader.wasm` (zxing-wasm 3.1.7) | File | 410,992 |
