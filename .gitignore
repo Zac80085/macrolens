@@ -1,0 +1,22 @@
+# dependencies and build output
+node_modules/
+dist/
+dev-dist/
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# secrets: never commit (NFR-008)
+.env
+.env.local
+.env.*.local
+
+# raw downloaded CoFID data (CLAUDE.md prohibition)
+data/raw/
+
+# OS and editor
+.DS_Store
+*.log
+.vscode/
+.idea/
