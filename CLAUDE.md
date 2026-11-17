@@ -75,7 +75,7 @@ npm run gates                   # lint, typecheck, coverage, e2e, size, trace, v
 - Do not commit `.env.local`, API keys, or `data/raw/`. Never print a key in logs, test output or snapshots.
 - Do not edit `docs/ENGINEERING_QA_PLAYBOOK.md` or `docs/PLAN.md`; record changes in `docs/requirements.md`, `docs/design.md` or an ADR.
 - Do not edit `public/data/cofid-2021.json` by hand; regenerate it with `npm run data:cofid`.
-- Do not let Gemini output become nutrient values except through the user's explicit "Use AI estimate" choice (REQ-012).
+- Do not let Gemini output become nutrient values except through the user's explicit "Use AI estimate" choice (REQ-040; REQ-012 in `docs/PLAN.md` is retired).
 - Do not call live APIs from CI or from `npm test`; use the fixtures in `tests/fixtures/`.
 - Do not force-push, rewrite published history, or delete the GitHub repository.
 

@@ -52,10 +52,10 @@ Constraints found:
 
 Products checked (per 100 g or ml as returned):
 
-| Barcode | Product | kcal | Protein | Carbs | Fat | Fibre | Sugar |
-|---|---|---|---|---|---|---|---|
-| `5000157024671` | Heinz Beanz in a rich tomato sauce, 415 g | 81 | 4.8 | 15.5 | 0.4 | 3.9 | 10.3 |
-| `5000112637922` | Coca-Cola 330 ml can | 42.1212 | 0 | 10.6061 | 0 | absent | 10.6061 |
+| Barcode | Product (`product_name_en` or `product_name`) | `brands` | kcal | Protein | Carbs | Fat | Fibre | Sugar |
+|---|---|---|---|---|---|---|---|---|
+| `5000157024671` | Beanz in a rich tomato sauce (415 g) | H J Heinz Foods UK Ltd | 81 | 4.8 | 15.5 | 0.4 | 3.9 | 10.3 |
+| `5000112637922` | 330ml Can | Coca-Cola | 42.1212 | 0 | 10.6061 | 0 | absent | 10.6061 |
 
 **TC-092 barcode: `5000157024671`** (Heinz Beanz; expects `energy-kcal_100g = 81`).
 
@@ -79,7 +79,7 @@ Products checked (per 100 g or ml as returned):
 | Image call, reduced schema | Same schema with `minLength`, `maxLength`, `minItems`, `maxItems`, `minimum`, `maximum`, `additionalProperties` and `$schema` removed (1,066 bytes; types, enums and `required` kept). `gemini-3.5-flash-lite` → 200 in 9,205 ms; output passes the full zod `AiAnalysis` schema; 1,316 prompt tokens, 1,062 output tokens; 6 items (chicken 150 g, rice 180 g, cucumber 40 g, chilli sauce 20 g, ginger sauce 20 g, clear soup 150 ml) | Live request; image = TC-090 candidate below, downscaled to 1,024 × 768, 196,940 bytes |
 | Flash availability | `gemini-3.6-flash` → 503 `UNAVAILABLE` "This model is currently experiencing high demand" on 4 of 4 calls over about 5 minutes; `gemini-3.8-flash` → 503; `gemini-3.7-flash` → 504 `DEADLINE_EXCEEDED` | Live requests, 2026-11-17 14:15 to 14:20 Europe/London |
 | Error mapping | Unknown model → `ApiError` status 404; invalid key → `ApiError` status 400 with `API_KEY_INVALID` in the body; schema rejection → status 400 without `API_KEY_INVALID` | Live requests |
-| USDA personal key | `POST /fdc/v1/foods/search` → 200; `x-ratelimit-limit: 3600` (PLAN 7.3 states 1,000 per hour); "banana" returns 83 hits; Foundation/SR Legacy/FNDDS rows carry nutrient 1008 | Live request |
+| USDA personal key | `POST /fdc/v1/foods/search` → 200; `x-ratelimit-limit: 3600` (PLAN 7.3 states 1,000 per hour); "banana" returns 83 hits; the first 3 results all carry nutrient 1008 and none carries 2047 or 2048: `173945` Bananas, dehydrated (SR Legacy) 1008 = 346, 1005 = 88.3, 1079 = 9.9, 2000 = 47.3; `2709225` Banana, baked (FNDDS) 1008 = 161, 1005 = 32.43, 1079 = 1.8, 2000 = 24.74; `2709224` Banana, raw (FNDDS) 1008 = 97, 1005 = 22.71, 1079 = 1.7, 2000 = 15.8 | Live request |
 | TC-090 image | Wikimedia Commons `File:Hainanese chicken rice.jpg` by Misaochan, CC BY 4.0, 4,032 × 3,024 px, 4,113,956 bytes, SHA-1 `e0ba443317f27aa8528d3f4917f4477a82aeff09`; shows chicken, rice, cucumber, 2 sauces and a bowl of soup on a plate. Its EXIF holds GPS data, which MUST be removed before the file is committed; attribution goes in `tests/fixtures/images/ATTRIBUTION.md` | Commons API `imageinfo` |
 
 Findings for Phase 1 and 2:
@@ -168,3 +168,13 @@ ASM-009 check: the user guide confirms `Tr` = trace and `N` = "present in signif
 | `xlsx` (SheetJS CDN, `https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz`) | 0.20.3, tarball SHA-256 `8dc73fc3b00203e72d176e85b50938627c7b086e607c682e8d3c22c02bb99fe8` |
 
 Decision for Phase 3: install SheetJS 0.20.3 from the versioned CDN tarball, not the npm registry, because the registry release has a known high-severity advisory and is used to parse an external file.
+
+## Addendum (Phase 1): barcode WASM serving (ADR-0006 input)
+
+| Item | Finding | Source |
+|---|---|---|
+| Package | `barcode-detector` 3.2.4 depends on `zxing-wasm` 3.1.7; entry points `barcode-detector/ponyfill` and `barcode-detector/polyfill` | `package.json` of 3.2.4 |
+| Default WASM location | `https://fastly.jsdelivr.net/npm/zxing-wasm@3.1.7/dist/reader/zxing_reader.wasm`, fetched at run time | `zxing-wasm` 3.1.7 `dist/es` |
+| Override | `prepareZXingModule({ overrides: { locateFile: (path, prefix) => ... } })` and `ZXING_WASM_VERSION` are re-exported by `barcode-detector/ponyfill` | `barcode-detector` README lines 189 to 212 |
+| WASM size | `zxing_reader.wasm` 946,598 bytes; 410,992 bytes gzip | `stat -f %z`, `gzip -c ... \| wc -c` |
+| Consequence | The default CDN URL is outside the NFR-009 `connect-src` list and is unavailable offline. The app MUST serve `zxing_reader.wasm` from its own origin, load it only when the Scan tab opens (outside the NFR-006 initial JavaScript budget), and precache it in the service worker. CSP `script-src` needs `'wasm-unsafe-eval'` | Derived |
