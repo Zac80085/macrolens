@@ -74,7 +74,22 @@ Products checked (per 100 g or ml as returned):
 | Abort and timeout | `config.abortSignal: AbortSignal`; `httpOptions.timeout` (ms) | `dist/genai.d.ts` |
 | SDK retries | `httpOptions.retryOptions.attempts` "If not specified, default to 5". The app MUST set `attempts: 1` so that `withPolicy` alone applies FM-001 (2 attempts) and the T-2 budget of 61,200 ms holds. | `dist/genai.d.ts` |
 | Error type | `ApiError` with `status: number` | `dist/genai.d.ts` |
-| Live models list and 1 image call | **Not run: no Gemini key** (`.env.local` missing). Blocker B-03 raised. | n/a |
+| Live models list | `GET /v1beta/models` → 200. Lists `gemini-3.5-flash-lite`, `gemini-3.6-flash`, `gemini-3.7-flash`, `gemini-3.8-flash`, `gemini-3.5-flash`, `gemini-3.1-flash-lite`, and aliases `gemini-flash-latest`, `gemini-flash-lite-latest`; each supports `generateContent` with an input limit of 1,048,576 tokens | Live request, Zac's key, 2026-11-17 |
+| Image call, full schema | Schema = zod `AiAnalysis` (PLAN 6.7) through `z.toJSONSchema`, including length, item-count and range limits. `gemini-3.5-flash-lite` → **400** "The specified schema produces a constraint that has too many states for serving" | Live request |
+| Image call, reduced schema | Same schema with `minLength`, `maxLength`, `minItems`, `maxItems`, `minimum`, `maximum`, `additionalProperties` and `$schema` removed (1,066 bytes; types, enums and `required` kept). `gemini-3.5-flash-lite` → 200 in 9,205 ms; output passes the full zod `AiAnalysis` schema; 1,316 prompt tokens, 1,062 output tokens; 6 items (chicken 150 g, rice 180 g, cucumber 40 g, chilli sauce 20 g, ginger sauce 20 g, clear soup 150 ml) | Live request; image = TC-090 candidate below, downscaled to 1,024 × 768, 196,940 bytes |
+| Flash availability | `gemini-3.6-flash` → 503 `UNAVAILABLE` "This model is currently experiencing high demand" on 4 of 4 calls over about 5 minutes; `gemini-3.8-flash` → 503; `gemini-3.7-flash` → 504 `DEADLINE_EXCEEDED` | Live requests, 2026-11-17 14:15 to 14:20 Europe/London |
+| Error mapping | Unknown model → `ApiError` status 404; invalid key → `ApiError` status 400 with `API_KEY_INVALID` in the body; schema rejection → status 400 without `API_KEY_INVALID` | Live requests |
+| USDA personal key | `POST /fdc/v1/foods/search` → 200; `x-ratelimit-limit: 3600` (PLAN 7.3 states 1,000 per hour); "banana" returns 83 hits; Foundation/SR Legacy/FNDDS rows carry nutrient 1008 | Live request |
+| TC-090 image | Wikimedia Commons `File:Hainanese chicken rice.jpg` by Misaochan, CC BY 4.0, 4,032 × 3,024 px, 4,113,956 bytes, SHA-1 `e0ba443317f27aa8528d3f4917f4477a82aeff09`; shows chicken, rice, cucumber, 2 sauces and a bowl of soup on a plate. Its EXIF holds GPS data, which MUST be removed before the file is committed; attribution goes in `tests/fixtures/images/ATTRIBUTION.md` | Commons API `imageinfo` |
+
+Findings for Phase 1 and 2:
+
+| ID | Finding | Proposed handling |
+|---|---|---|
+| P0-F10 | Gemini rejects the full `AiAnalysis` JSON schema with 400 | Send a reduced schema (types, enums, `required`) as `responseJsonSchema`; enforce every limit with zod after the response (FM-003 repair path still applies) |
+| P0-F11 | A 400 that is not `API_KEY_INVALID` has no mapping in PLAN 7.2 | Map it to a non-retryable Gemini request error in `docs/requirements.md` |
+| P0-F12 | The default model `gemini-3.6-flash` was unavailable (503) for 4 of 4 calls while `gemini-3.5-flash-lite` answered | Decide in ADR-0007 whether attempt 2 of FM-001 uses the fallback model `gemini-3.5-flash-lite`; retest `gemini-3.6-flash` before locking the default |
+| P0-F13 | USDA rate limit observed as 3,600 per hour, not 1,000 | Use the observed value in `docs/requirements.md`; `USDA_RATE_LIMITED` behaviour is unchanged |
 
 ## T0.4 CoFID 2021 XLSX (ASM-009)
 
